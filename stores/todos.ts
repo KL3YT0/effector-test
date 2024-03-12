@@ -1,4 +1,5 @@
-import { createEffect, createEvent, createStore } from 'effector';
+import { createEffect, createEvent, createStore, sample } from 'effector';
+import { toast } from 'react-toastify';
 import { debounce } from '../src/utils';
 
 interface Todo {
@@ -15,40 +16,19 @@ interface ExternalTodo {
     userId: number;
 }
 
-interface Store {
-    todos: Todo[];
-    api: {
-        loading: boolean;
-        failed: boolean;
-    };
-    filter: string;
-}
+const $todos = createStore<Todo[]>([]);
+const $search = createStore('');
 
-function createTodos(quantity: number = 10): Todo[] {
-    const todos: Todo[] = [];
+const todoRemoved = createEvent<string>();
+const todosReset = createEvent();
+const todoAdded = createEvent();
+const filterUpdated = createEvent<string>();
 
-    for (let i = 0; i < quantity; i++) {
-        todos.push({
-            id: String(i),
-            title: `title ${i}`,
-            description: `description ${i}`,
-            deadline: '23.03.2024',
-        });
-    }
-
-    return todos;
-}
-
-const removeTodoEvent = createEvent<string>();
-const resetTodosEvent = createEvent();
-const addTodoEvent = createEvent();
-const updateFilter = createEvent<string>();
-
-const updateFilterPrepended = updateFilter.prepend(
+const searchUpdatedPrepend = filterUpdated.prepend(
     (event: React.ChangeEvent<HTMLInputElement>) => event.target.value,
 );
 
-const updateFilterPrependedDebounced = debounce(updateFilterPrepended);
+const searchUpdatedDebounce = debounce(searchUpdatedPrepend);
 
 async function asyncTimeout(timeout = 3000): Promise<void> {
     return new Promise((res) => {
@@ -66,75 +46,69 @@ const getTodosFx = createEffect(async (): Promise<ExternalTodo[]> => {
     return todos;
 });
 
-const $store = createStore<Store>({ todos: [], api: { loading: false, failed: false }, filter: '' })
-    .on(removeTodoEvent, (state, id) => {
-        return { ...state, todos: state.todos.filter((todo) => todo.id !== id) };
+todoRemoved.watch((value) => {
+    toast(`Todo ${value} removed successfully`);
+});
+
+getTodosFx.done.watch(() => {
+    toast('Todos loaded successfully', { type: 'success' });
+});
+
+getTodosFx.fail.watch(() => {
+    toast('Todos loaded with error', { type: 'error' });
+});
+
+$todos
+    .on(todoRemoved, (todos, id) => {
+        return todos.filter((todo) => todo.id !== id);
     })
-    .on(addTodoEvent, (state) => {
+    .on(todoAdded, (todos) => {
         const id = crypto.randomUUID();
 
-        return {
-            ...state,
-            todos: [
-                {
-                    id,
-                    title: `title ${id}`,
-                    description: `description ${id}`,
-                    deadline: `24.04.2024`,
-                },
-                ...state.todos,
-            ],
-        };
+        return [
+            {
+                id,
+                title: `title ${id}`,
+                description: `description ${id}`,
+                deadline: `24.04.2024`,
+            },
+            ...todos,
+        ];
     })
-    .on(getTodosFx.pending, (state) => {
-        return {
-            ...state,
-            api: { failed: false, loading: getTodosFx.pending.getState() },
-        };
-    })
-    .on(getTodosFx.doneData, (state, todos) => {
-        return {
-            ...state,
+    .on(getTodosFx.doneData, (todos, loadedTodos) => {
+        console.log(loadedTodos);
 
-            todos: [
-                ...state.todos,
-                ...todos
-                    .map((todo) => ({
-                        title: todo.title,
-                        description: `description ${todo.id}`,
-                        id: String(todo.id),
-                        deadline: '25.04.2024',
-                    }))
-                    .slice(0, 20),
-            ],
-        };
+        return [
+            ...todos,
+            ...loadedTodos
+                .map((todo) => ({
+                    title: todo.title,
+                    description: `description ${todo.id}`,
+                    id: String(todo.id),
+                    deadline: '25.04.2024',
+                }))
+                .slice(0, 20),
+        ];
     })
-    .on(getTodosFx.finally, (state) => {
-        return {
-            ...state,
-            api: { failed: false, loading: getTodosFx.pending.getState() },
-        };
-    })
-    .on(updateFilter, (state, filter) => {
-        return {
-            ...state,
-            filter,
-        };
-    })
-    .reset(resetTodosEvent);
+    .reset(todosReset);
 
-const $todosFiltered = $store.map((state) => {
-    return state.todos.filter((todo) => todo.description.includes(state.filter));
+$search.on(filterUpdated, (_, search) => {
+    return search;
+});
+
+const $searched = sample({
+    source: { todos: $todos, search: $search },
+    fn: ({ todos, search }) => {
+        return todos.filter((todo) => todo.title.includes(search));
+    },
 });
 
 export {
-    $store,
-    $todosFiltered,
-    removeTodoEvent,
-    addTodoEvent,
-    resetTodosEvent,
-    updateFilter,
-    updateFilterPrepended,
-    updateFilterPrependedDebounced,
+    $searched,
+    todoRemoved,
+    todoAdded,
+    todosReset,
+    filterUpdated,
+    searchUpdatedDebounce,
     getTodosFx,
 };

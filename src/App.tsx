@@ -1,23 +1,16 @@
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import { Todo } from './pages/Todo';
 import './App.css';
 
-// interface Store {
-//     count: number;
-// }
-
-// const incEvent = createEvent();
-
-// const $store = createStore<Store>({
-//     count: 10,
-// }).on(incEvent, (state) => {
-//     return {
-//         ...state,
-//         count: state.count + 1,
-//     };
-// });
-
 function App() {
-    return <Todo />;
+    return (
+        <>
+            <Todo />
+            <ToastContainer />
+        </>
+    );
 }
 
 export default App;
