@@ -22,9 +22,9 @@ const $search = createStore('');
 const todoRemoved = createEvent<string>();
 const todosReset = createEvent();
 const todoAdded = createEvent();
-const filterUpdated = createEvent<string>();
+const searchUpdated = createEvent<string>();
 
-const searchUpdatedPrepend = filterUpdated.prepend(
+const searchUpdatedPrepend = searchUpdated.prepend(
     (event: React.ChangeEvent<HTMLInputElement>) => event.target.value,
 );
 
@@ -92,7 +92,7 @@ $todos
     })
     .reset(todosReset);
 
-$search.on(filterUpdated, (_, search) => {
+$search.on(searchUpdated, (_, search) => {
     return search;
 });
 
@@ -108,7 +108,7 @@ export {
     todoRemoved,
     todoAdded,
     todosReset,
-    filterUpdated,
+    searchUpdated as filterUpdated,
     searchUpdatedDebounce,
     getTodosFx,
 };
