@@ -76,8 +76,6 @@ $todos
         ];
     })
     .on(getTodosFx.doneData, (todos, loadedTodos) => {
-        console.log(loadedTodos);
-
         return [
             ...todos,
             ...loadedTodos
@@ -103,12 +101,4 @@ const $searched = sample({
     },
 });
 
-export {
-    $searched,
-    todoRemoved,
-    todoAdded,
-    todosReset,
-    searchUpdated as filterUpdated,
-    searchUpdatedDebounce,
-    getTodosFx,
-};
+export { $searched, todoRemoved, todoAdded, todosReset, searchUpdatedDebounce, getTodosFx };
