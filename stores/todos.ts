@@ -1,4 +1,4 @@
-import { createEffect, createEvent, createStore, sample } from 'effector';
+import { combine, createEffect, createEvent, createStore, sample } from 'effector';
 import { toast } from 'react-toastify';
 import { debounce } from '../src/utils';
 
@@ -94,11 +94,8 @@ $search.on(searchUpdated, (_, search) => {
     return search;
 });
 
-const $searched = sample({
-    source: { todos: $todos, search: $search },
-    fn: ({ todos, search }) => {
-        return todos.filter((todo) => todo.title.includes(search));
-    },
+const $searched = combine($todos, $search, (todos, search) => {
+    return todos.filter((todo) => todo.title.includes(search));
 });
 
 export { $searched, todoRemoved, todoAdded, todosReset, searchUpdatedDebounce, getTodosFx };
