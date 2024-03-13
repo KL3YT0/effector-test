@@ -1,20 +1,8 @@
-import { combine, createEffect, createEvent, createStore, sample } from 'effector';
+import { attach, combine, createEvent, createStore } from 'effector';
 import { toast } from 'react-toastify';
 import { debounce } from '../src/utils';
-
-interface Todo {
-    id: string;
-    title: string;
-    description: string;
-    deadline: string;
-}
-
-interface ExternalTodo {
-    completed: boolean;
-    id: number;
-    title: string;
-    userId: number;
-}
+import * as api from '../src/api';
+import { Todo } from '../src/types';
 
 const $todos = createStore<Todo[]>([]);
 const $search = createStore('');
@@ -24,37 +12,23 @@ const todosReset = createEvent();
 const todoAdded = createEvent();
 const searchUpdated = createEvent<string>();
 
+const getTodosFx = attach({ effect: api.getTodosFx });
+
 const searchUpdatedPrepend = searchUpdated.prepend(
     (event: React.ChangeEvent<HTMLInputElement>) => event.target.value,
 );
 
 const searchUpdatedDebounce = debounce(searchUpdatedPrepend);
 
-async function asyncTimeout(timeout = 3000): Promise<void> {
-    return new Promise((res) => {
-        setTimeout(() => {
-            res();
-        }, timeout);
-    });
-}
-
-const getTodosFx = createEffect(async (): Promise<ExternalTodo[]> => {
-    const todos = (await fetch('https://jsonplaceholder.typicode.com/todos')).json();
-
-    await asyncTimeout();
-
-    return todos;
-});
-
 todoRemoved.watch((value) => {
     toast(`Todo ${value} removed successfully`);
 });
 
-getTodosFx.done.watch(() => {
+api.getTodosFx.done.watch(() => {
     toast('Todos loaded successfully', { type: 'success' });
 });
 
-getTodosFx.fail.watch(() => {
+api.getTodosFx.fail.watch(() => {
     toast('Todos loaded with error', { type: 'error' });
 });
 
@@ -98,4 +72,4 @@ const $searched = combine($todos, $search, (todos, search) => {
     return todos.filter((todo) => todo.title.includes(search));
 });
 
-export { $searched, todoRemoved, todoAdded, todosReset, searchUpdatedDebounce, getTodosFx };
+export { $searched, todoRemoved, todoAdded, todosReset, getTodosFx, searchUpdatedDebounce };
